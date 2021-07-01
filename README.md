@@ -14,4 +14,4 @@ To use it, go to your browser and simply replace the https:// in the repository'
 
 For example, `https://github.com/tbhmens/gitdl` => `gitdl://github.com/tbhmens/gitdl`
 
-Important: move the exe to a directory in which it won't be (re)moved, otherwise windows won't be able to find the gitdl executeable.
+Important: move the exe to a directory in which it won't be (re)moved, otherwise windows won't be able to find the gitdl executable.
