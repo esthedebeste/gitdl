@@ -85,7 +85,7 @@ func main() {
 		}
 		user, _ := user.Current()
 		dir := user.HomeDir + "\\Desktop\\"
-		pathsepped := strings.Split(url.Path, "/")
+		pathsepped := strings.Split(strings.TrimSuffix(url.Path, "/"), "/")
 		dir += pathsepped[len(pathsepped)-1]
 		clone := exec.Command(gitPath, "clone", "--recursive", "http://"+url.Host+url.Path, dir)
 		clone.Stdout = os.Stdout
