@@ -17,8 +17,8 @@ jobs:
         env:
           GOPROXY: "https://proxy.golang.org"
         run: go build -o gitdl.exe
-      - name: Archive code coverage results
+      - name: Upload to artifacts
         uses: actions/upload-artifact@v2
         with:
           name: gitdl.exe
-          path: output/test/code-coverage.html
+          path: gitdl.exe
