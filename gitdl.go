@@ -6,8 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"regexp"
 	"runtime"
-	"strings"
 	"syscall"
 
 	"golang.org/x/sys/windows"
@@ -85,15 +85,23 @@ func main() {
 		}
 		user, _ := user.Current()
 		dir := user.HomeDir + "\\Desktop\\"
-		pathsepped := strings.Split(strings.TrimSuffix(url.Path, "/"), "/")
-		dir += pathsepped[len(pathsepped)-1]
-		clone := exec.Command(gitPath, "clone", "--recursive", "http://"+url.Host+url.Path, dir)
+		var clone *exec.Cmd
+		treegex := regexp.MustCompile(`(.*\/(.*))\/tree\/[\w-]+\/?$`)
+		dir += treegex.FindStringSubmatch(url.Path)[2]
+		if treegex.MatchString(url.Path) {
+			branch := regexp.MustCompile(`([\w-]+)/?$`).FindStringSubmatch(url.Path)[1]
+			path := treegex.FindStringSubmatch(url.Path)[1]
+			clone = exec.Command(gitPath, "clone", "-b", branch, "--recursive", "http://"+url.Host+path, dir+"-"+branch)
+			defer exec.Command("explorer.exe", dir+"-"+branch).Run()
+		} else {
+			clone = exec.Command(gitPath, "clone", "--recursive", "http://"+url.Host+url.Path, dir)
+			defer exec.Command("explorer.exe", dir).Run()
+		}
 		clone.Stdout = os.Stdout
 		clone.Stderr = os.Stderr
 		err = clone.Run()
 		if err != nil {
 			fmt.Println(err)
 		}
-		exec.Command("explorer.exe", dir).Run()
 	}
 }
