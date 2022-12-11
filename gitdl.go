@@ -28,6 +28,32 @@ func fatal(a string) {
 	os.Exit(1)
 }
 
+func register(url, execute string) {
+	key, _, err := registry.CreateKey(registry.CLASSES_ROOT, url, registry.SET_VALUE|registry.CREATE_SUB_KEY)
+	if err != nil {
+		fatal(err.Error())
+	}
+	defer key.Close()
+	key.SetStringValue("", "URL:"+url)
+	key.SetStringValue("URL Protocol", "")
+	shell, _, err := registry.CreateKey(key, "shell", registry.CREATE_SUB_KEY)
+	if err != nil {
+		fatal(err.Error())
+	}
+	defer shell.Close()
+	open, _, err := registry.CreateKey(shell, "open", registry.CREATE_SUB_KEY)
+	if err != nil {
+		fatal(err.Error())
+	}
+	defer open.Close()
+	command, _, err := registry.CreateKey(open, "command", registry.SET_VALUE|registry.CREATE_SUB_KEY)
+	if err != nil {
+		fatal(err.Error())
+	}
+	defer command.Close()
+	command.SetStringValue("", execute)
+}
+
 func main() {
 	if runtime.GOOS != "windows" {
 		fatal("This tool has been made for (and depends on) windows.")
@@ -54,36 +80,15 @@ func main() {
 		fmt.Println("Opening UAC prompt.")
 	} else {
 		if os.Args[1] == "--admined" {
-			key, _, err := registry.CreateKey(registry.CLASSES_ROOT, "gitdl", registry.SET_VALUE|registry.CREATE_SUB_KEY)
-			if err != nil {
-				fatal(err.Error())
-			}
-			defer key.Close()
-			key.SetStringValue("", "URL:gitdl")
-			key.SetStringValue("URL Protocol", "")
-			shell, _, err := registry.CreateKey(key, "shell", registry.CREATE_SUB_KEY)
-			if err != nil {
-				fatal(err.Error())
-			}
-			defer shell.Close()
-			open, _, err := registry.CreateKey(shell, "open", registry.CREATE_SUB_KEY)
-			if err != nil {
-				fatal(err.Error())
-			}
-			defer open.Close()
-			command, _, err := registry.CreateKey(open, "command", registry.SET_VALUE|registry.CREATE_SUB_KEY)
-			if err != nil {
-				fatal(err.Error())
-			}
-			defer command.Close()
-			command.SetStringValue("", "\""+executable+"\" \"%1\"")
-			fmt.Println("\"" + executable + "\" \"%1\"")
+			register("gitdl", "\""+executable+"\" \"%1\"")
+			register("gitshallowdl", "\""+executable+"\" \"%1\" --depth 1")
 			return
 		}
 		url, err := url.Parse(os.Args[1])
 		if err != nil {
 			fatal(err.Error())
 		}
+		custom_args := os.Args[2:]
 		user, _ := user.Current()
 		dir := user.HomeDir + "\\Desktop\\"
 		var clone *exec.Cmd
@@ -92,12 +97,18 @@ func main() {
 			dir += treegex.FindStringSubmatch(url.Path)[2]
 			branch := regexp.MustCompile(`([\w-]+)/?$`).FindStringSubmatch(url.Path)[1]
 			path := treegex.FindStringSubmatch(url.Path)[1]
-			clone = exec.Command(gitPath, "clone", "-b", branch, "--recursive", "http://"+url.Host+path, dir+"-"+branch)
+			args := []string{"clone", "-b", branch, "--recursive", "http://" + url.Host + path, dir + "-" + branch}
+			args = append(args, custom_args...)
+			fmt.Println("`git", strings.Join(args, " ")+"`")
+			clone = exec.Command(gitPath, args...)
 			defer exec.Command("explorer.exe", dir+"-"+branch).Run()
 		} else {
 			pathsepped := strings.Split(strings.TrimSuffix(url.Path, "/"), "/")
 			dir += pathsepped[len(pathsepped)-1]
-			clone = exec.Command(gitPath, "clone", "--recursive", "http://"+url.Host+url.Path, dir)
+			args := []string{"clone", "--recursive", "http://" + url.Host + url.Path, dir}
+			args = append(args, custom_args...)
+			fmt.Println("`git", strings.Join(args, " ")+"`")
+			clone = exec.Command(gitPath, args...)
 			defer exec.Command("explorer.exe", dir).Run()
 		}
 		clone.Stdout = os.Stdout
